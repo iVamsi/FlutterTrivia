@@ -12,6 +12,9 @@ class TriviaQuestion {
   final String correctAnswer;
   final List<String> incorrectAnswers;
 
+
+  TriviaQuestion(this.question, this.correctAnswer, this.incorrectAnswers);
+
   TriviaQuestion.fromJson(Map<String, dynamic> parsedJson)
       : question = parsedJson["question"],
         correctAnswer = parsedJson["correct_answer"],

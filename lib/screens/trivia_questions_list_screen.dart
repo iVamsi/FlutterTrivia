@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertrivia/blocs/trivia_questions_list_bloc.dart';
 import 'package:fluttertrivia/models/trivia_response.dart';
 import 'package:fluttertrivia/routes/trivia_results_screen_route.dart';
-import 'package:fluttertrivia/services/trivia_service.dart';
+import 'package:generic_bloc_provider/generic_bloc_provider.dart';
 import 'package:html_unescape/html_unescape.dart';
 
 class TriviaQuestionsListScreen extends StatefulWidget {
@@ -11,12 +12,21 @@ class TriviaQuestionsListScreen extends StatefulWidget {
 }
 
 class _TriviaQuestionsListScreenState extends State<TriviaQuestionsListScreen> {
-  final questions = <TriviaQuestion>[];
+  TriviaQuestionsListBloc bloc;
 
   @override
-  void initState() {
-    _refreshQuestions();
-    super.initState();
+  void didChangeDependencies() {
+    if (bloc == null) {
+      bloc = BlocProvider.of<TriviaQuestionsListBloc>(context);
+      _refreshQuestions(true);
+    }
+    super.didChangeDependencies();
+  }
+
+  @override
+  void dispose() {
+    bloc.dispose();
+    super.dispose();
   }
 
   @override
@@ -27,62 +37,49 @@ class _TriviaQuestionsListScreenState extends State<TriviaQuestionsListScreen> {
                 style: TextStyle(color: Colors.white)),
             centerTitle: true,
             backgroundColor: Colors.blue),
-        body: _getBody(),
+        body: StreamBuilder(
+          stream: bloc.triviaQuestionsStream,
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return _getProgressDialog();
+            }
+            return _getListView(snapshot.data);
+          },
+        ),
         floatingActionButton: FloatingActionButton(
-          onPressed: _refreshQuestions,
+          onPressed: () {
+            bloc.fetchTriviaQuestions(true);
+          },
           child: Icon(Icons.refresh),
         ));
-  }
-
-  _getBody() {
-    if (_showLoadingDialog()) {
-      return _getProgressDialog();
-    } else {
-      return _getListView();
-    }
-  }
-
-  _showLoadingDialog() {
-    return questions.length == 0;
   }
 
   _getProgressDialog() {
     return Center(child: CircularProgressIndicator());
   }
 
-  ListView _getListView() => ListView.builder(
+  ListView _getListView(List<TriviaQuestion> questions) => ListView.builder(
       itemCount: questions.length,
       itemBuilder: (BuildContext context, int position) {
-        return _getRow(position);
+        return _getRow(questions[position]);
       });
 
-  Widget _getRow(int position) {
+  Widget _getRow(TriviaQuestion question) {
     return Card(
       elevation: 4.0,
       child: ListTile(
         onTap: () => Navigator.of(context).pushNamed(
             TriviaResultsScreenRoute.routeName,
             arguments:
-                TriviaResultsScreenRoute(triviaQuestion: questions[position])),
+                TriviaResultsScreenRoute(triviaQuestion: question)),
         title: Text(
-          "${HtmlUnescape().convert(questions[position].question)}",
+          "${HtmlUnescape().convert(question.question)}",
         ),
       ),
     );
   }
 
-  void _fetchTriviaQuestions() async {
-    final TriviaResponse triviaResponse =
-        await TriviaService().fetchTriviaQuestions();
-    setState(() {
-      questions.addAll(triviaResponse.triviaQuestions);
-    });
-  }
-
-  void _refreshQuestions() async {
-    setState(() {
-      questions.clear();
-      _fetchTriviaQuestions();
-    });
+  void _refreshQuestions(bool shouldClearList) {
+    bloc.fetchTriviaQuestions(shouldClearList);
   }
 }

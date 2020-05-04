@@ -34,6 +34,7 @@ class _TriviaResultsScreenState extends State<TriviaResultsScreen> {
               style: TextStyle(
                 color: Colors.deepPurple
               ),
+              textAlign: TextAlign.center,
             ),
           ),
           SizedBox(
